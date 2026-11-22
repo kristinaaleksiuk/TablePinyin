@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Пиньинь: слоги и сопоставление</title>
+<style>
+:root{color-scheme:light;--bg:#faf8f5;--card:#fff;--tx:#1f1d1a;--mu:#6b665e;--bd:#e3ddd3;--ac:#c0392b;--ac2:#fbeae7;--ok:#2e7d4f;--okb:#e3f3e9;--er:#b3261e;--erb:#fde7e5;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#1b1917;--card:#262321;--tx:#f1ede6;--mu:#a49d92;--bd:#3a3632;--ac:#ef7a6c;--ac2:#3b2522;--ok:#6fcf97;--okb:#1f3427;--er:#f2988f;--erb:#3b2220}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#1b1917;--card:#262321;--tx:#f1ede6;--mu:#a49d92;--bd:#3a3632;--ac:#ef7a6c;--ac2:#3b2522;--ok:#6fcf97;--okb:#1f3427;--er:#f2988f;--erb:#3b2220}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:760px;margin:0 auto;padding:16px}
+h1{font-size:22px;margin:4px 0 2px}
+.sub{color:var(--mu);margin:0 0 14px;font-size:14px}
+.tabs{display:flex;gap:6px;margin-bottom:14px}
+.tabs button{flex:1}
+button{font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:9px 12px;cursor:pointer}
+button:hover{border-color:var(--ac)}
+button.on{background:var(--ac);border-color:var(--ac);color:#fff}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px;margin-bottom:12px}
+.row{display:flex;flex-wrap:wrap;gap:6px}
+.lbl{font-size:13px;color:var(--mu);margin:0 0 8px}
+.ini button{min-width:44px;padding:7px 9px}
+.syl button{min-width:56px;padding:7px 10px}
+.syl button.sel{background:var(--ac2);border-color:var(--ac);color:var(--ac);font-weight:600}
+.tones button{flex:1;font-size:18px}
+.tray{font-size:15px;min-height:24px;word-break:break-word}
+.act{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.big{background:var(--ac);color:#fff;border-color:var(--ac)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid button{width:100%;min-height:52px;font-size:20px}
+.grid button.pick{border-color:var(--ac);background:var(--ac2)}
+.grid button.done{background:var(--okb);border-color:var(--ok);color:var(--ok);pointer-events:none}
+.grid button.bad{background:var(--erb);border-color:var(--er);animation:sh .3s}
+@keyframes sh{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.stat{display:flex;justify-content:space-between;color:var(--mu);font-size:14px;margin-bottom:10px}
+.note{color:var(--er);font-size:13px;min-height:18px}
+.win{text-align:center;padding:10px;color:var(--ok);font-weight:600}
+.hide{display:none}
+.wrap{overflow:auto;max-height:62vh;border:1px solid var(--bd);border-radius:10px;background:var(--card)}
+#tbl{border-collapse:collapse;font-size:13px;white-space:nowrap}
+#tbl th,#tbl td{border-bottom:1px solid var(--bd);padding:0;text-align:center}
+#tbl th.grp{background:var(--ac2);color:var(--ac);padding:5px 8px;border-left:1px solid var(--bd);position:sticky;top:0;z-index:2}
+#tbl th.fh{color:var(--mu);font-weight:500;padding:4px 6px;cursor:pointer;font-size:12px;background:var(--card);position:sticky;top:27px;z-index:2}
+#tbl th.rh{position:sticky;left:0;background:var(--card);padding:6px 12px;cursor:pointer;border-right:1px solid var(--bd);z-index:1}
+#tbl thead th:first-child{position:sticky;left:0;z-index:3;background:var(--card)}
+#tbl td button{border:0;background:transparent;border-radius:6px;padding:6px 7px;min-width:44px;font-size:13px}
+#tbl td button:hover{background:var(--ac2)}
+#tbl td button.sel{background:var(--ac);color:#fff}
+.btn{display:inline-block;font:inherit;background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:9px 12px;cursor:pointer}.btn:hover{border-color:var(--ac)}
+</style>
+</head>
+<body>
+<main>
+<h1>Пиньинь: слоги и сопоставление</h1>
+<p class="sub">Выберите слоги, затем сопоставьте звук с написанием. Озвучка — hskcourse.com.</p>
+<div class="tabs">
+ <button id="t1" class="on">1. Выбор слогов</button>
+ <button id="t2">2. Сопоставление</button>
+</div>
+
+<section id="p1">
+ <div class="card"><p class="lbl">Таблица слогов: нажмите на слог, чтобы выбрать его и послушать тоны. Заголовок строки или столбца выбирает всё сразу.</p><div class="wrap"><table id="tbl"></table></div></div>
+ <div class="card hide"><p class="lbl">Начальный звук (инициаль)</p><div class="row ini" id="ini"></div></div>
+ <div class="card hide"><p class="lbl" id="grpLbl">Слоги</p><div class="row syl" id="syl"></div>
+  <div class="act"><button id="all">Выбрать все</button><button id="none">Снять группу</button></div></div>
+  <div class="card hide" id="tonebox"><p class="lbl" id="toneLbl">Тоны</p><div class="row tones" id="tones"></div></div>
+ <div class="card"><p class="lbl">Выбрано: <b id="cnt">0</b></p><div class="tray" id="tray">—</div>
+  <div class="act"><button id="clear">Очистить</button><button class="big" id="go">К сопоставлению →</button></div></div>
+</section>
+
+<section id="p2" class="hide">
+ <div class="stat"><span id="prog"></span><span id="err"></span></div>
+ <div class="grid" id="game"></div>
+ <div class="win hide" id="win"></div>
+ <div class="act"><button class="big" id="again">Новый раунд</button><button id="back">← Слоги</button></div>
+</section>
+<p class="note" id="note"></p>
+</main>
+<script>
+const RAW={b:"ba bai bei bao ban ben bang beng bi bie biao bian bin bing bo bu",p:"pa pai pei pao pou pan pen pang peng pi pie piao pian pin ping po pu",m:"ma me mai mei mao mou man men mang meng mi mie miao miu mian min ming mo mu",f:"fa fei fou fan fen fang feng fo fu",d:"da de dai dei dao dou dan dang deng di die diao diu dian ding dong du duo dui duan dun",t:"ta te tai tao tou tan tang teng ti tie tiao tian ting tong tu tuo tui tuan tun",n:"na ne nai nei nao nou nan nen nang neng ni nie niao niu nian nin niang ning nong nu nuo nuan nv nve",l:"la le lai lei lao lou lan lang leng li lia lie liao liu lian lin liang ling long lu luo luan lun lv lve",g:"ga ge gai gei gao gou gan gen gang geng gong gu gua guo guai gui guan gun guang",k:"ka ke kai kei kao kou kan ken kang keng kong ku kua kuo kuai kui kuan kun kuang",h:"ha he hai hei hao hou han hen hang heng hong hu hua huo huai hui huan hun huang",j:"ji jia jie jiao jiu jian jin jiang jing jiong ju jue juan jun",q:"qi qia qie qiao qiu qian qin qiang qing qiong qu que quan qun",x:"xi xia xie xiao xiu xian xin xiang xing xiong xu xue xuan xun",zh:"zha zhe zhai zhei zhao zhou zhan zhen zhang zheng zhi zhong zhu zhua zhuo zhuai zhui zhuan zhun zhuang",ch:"cha che chai chao chou chan chen chang cheng chi chong chu chua chuo chuai chui chuan chun chuang",sh:"sha she shai shei shao shou shan shen shang sheng shi shu shua shuo shuai shui shuan shun shuang",r:"re rao rou ran ren rang reng ri rong ru rua ruo rui ruan run",z:"za ze zai zei zao zou zan zen zang zeng zi zong zu zuo zui zuan zun",c:"ca ce cai cao cou can cen cang ceng ci cong cu cuo cui cuan cun",s:"sa se sai sao sou san sen sang seng si song su suo sui suan sun",y:"yi ya ye yao you yan yin yang ying yong yu yue yuan yun",w:"wu wa wo wai wei wan wen wang weng","∅":"a e er ai ao ou an en ang eng o"};
+const D={};for(const k in RAW)D[k]=RAW[k].split(" ");
+const BASE="https://www.hskcourse.com/tool/pinyin/sound/";
+const MK={a:"āáǎà",e:"ēéěè",o:"ōóǒò",i:"īíǐì",u:"ūúǔù","ü":"ǖǘǚǜ"};
+function mark(s,t){s=s.replace("v","ü");const V="aeiouü";let i=s.indexOf("a");if(i<0)i=s.indexOf("e");if(i<0&&s.includes("ou"))i=s.indexOf("o");if(i<0){for(let j=s.length-1;j>=0;j--)if(V.includes(s[j])){i=j;break}}return s.slice(0,i)+MK[s[i]][t-1]+s.slice(i+1)}
+const plain=s=>s.replace("v","ü");
+const $=id=>document.getElementById(id);
+const sel=new Set();let cur=null,last=null;
+
+function speak(s,t){
+  if(!window.speechSynthesis){$("note").textContent="Звук недоступен: нет записи и нет синтезатора речи в браузере.";return}
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(mark(s,t));
+  u.lang="zh-CN";u.rate=0.7;
+  const v=speechSynthesis.getVoices().find(x=>/^zh/i.test(x.lang));
+  if(v)u.voice=v;
+  $("note").textContent="Запись не загрузилась, играет синтезатор речи (звучание приблизительное).";
+  speechSynthesis.speak(u);
+}
+const k0=(s,t)=>s+t+".mp3";
+function play(s,t){
+  $("note").textContent="";
+  const k=s+t,SRC=["audio/"+k0(s,t),"https://storage.yandexcloud.net/buyilehu/audio/pinyin/"+k0(s,t),BASE+k0(s,t)];
+  const next=i=>{
+    if(i>=SRC.length){speak(s,t);return}
+    let failed=false;
+    const fail=()=>{if(!failed){failed=true;next(i+1)}};
+    const a=new Audio(SRC[i]);
+    a.onerror=fail;
+    a.play().catch(fail);
+  };
+  next(0);
+}
+if(window.speechSynthesis)speechSynthesis.getVoices();
+function renderIni(){
+  $("ini").innerHTML="";
+  for(const k in D){const b=document.createElement("button");b.textContent=k;b.className=cur===k?"on":"";b.onclick=()=>{cur=k;renderIni();renderSyl()};$("ini").appendChild(b)}
+}
+function renderSyl(){
+  const box=$("syl");box.innerHTML="";
+  if(!cur){$("grpLbl").textContent="Слоги";box.textContent="Сначала выберите начальный звук.";return}
+  $("grpLbl").textContent="Слоги на «"+cur+"»";
+  for(const s of D[cur]){const b=document.createElement("button");b.textContent=plain(s);if(sel.has(s))b.className="sel";
+    b.onclick=()=>{if(sel.has(s))sel.delete(s);else sel.add(s);last=s;showTones(s);renderSyl();renderTray()};box.appendChild(b)}
+}
+function showTones(s){
+  $("tonebox").classList.remove("hide");$("toneLbl").textContent="Тоны: "+plain(s)+" (нажмите, чтобы послушать)";
+  const t=$("tones");t.innerHTML="";
+  for(let i=1;i<=4;i++){const b=document.createElement("button");b.textContent="🔊 "+mark(s,i);b.onclick=()=>play(s,i);t.appendChild(b)}
+}
+function renderTray(){
+  $("cnt").textContent=sel.size;
+  $("tray").textContent=sel.size?[...sel].map(plain).join(" · "):"—";
+}
+$("all").onclick=()=>{if(cur){D[cur].forEach(s=>sel.add(s));renderSyl();renderTray()}};
+$("none").onclick=()=>{if(cur){D[cur].forEach(s=>sel.delete(s));renderSyl();renderTray()}};
+$("clear").onclick=()=>{sel.clear();renderTable();renderTray()};
+
+function tab(n){
+  $("p1").classList.toggle("hide",n!==1);$("p2").classList.toggle("hide",n!==2);
+  $("t1").className=n===1?"on":"";$("t2").className=n===2?"on":"";
+}
+$("t1").onclick=()=>tab(1);
+$("back").onclick=()=>tab(1);
+$("t2").onclick=$("go").onclick=()=>{tab(2);newRound()};
+$("again").onclick=newRound;
+
+const shuf=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+let items=[],pl=null,pr=null,done=0,errs=0;
+function newRound(){
+  $("win").classList.add("hide");$("note").textContent="";
+  const g=$("game");g.innerHTML="";
+  if(sel.size<2){g.innerHTML='<div class="card" style="grid-column:1/-1">Выберите хотя бы 2 слога на первой вкладке.</div>';$("prog").textContent="";$("err").textContent="";return}
+  items=shuf([...sel]).slice(0,6).map((s,i)=>({id:i,s,t:1+Math.floor(Math.random()*4)}));
+  pl=pr=null;done=0;errs=0;upd();
+  const L=shuf(items),R=shuf(items);
+  for(let i=0;i<items.length;i++){
+    const a=document.createElement("button");a.textContent="🔊";a.dataset.side="L";a.dataset.id=L[i].id;a.onclick=()=>pick(a,L[i],"L");
+    g.appendChild(a);
+    const b=document.createElement("button");b.textContent=mark(R[i].s,R[i].t);b.dataset.side="R";b.dataset.id=R[i].id;b.onclick=()=>pick(b,R[i],"R");
+    g.appendChild(b);
+  }
+}
+function upd(){$("prog").textContent="Найдено пар: "+done+" / "+items.length;$("err").textContent="Ошибок: "+errs}
+function pick(el,it,side){
+  if(side==="L"){play(it.s,it.t);if(pl)pl.el.classList.remove("pick");pl={el,it}}
+  else{if(pr)pr.el.classList.remove("pick");pr={el,it}}
+  el.classList.add("pick");
+  if(pl&&pr){
+    const A=pl,B=pr;pl=pr=null;
+    if(A.it.id===B.it.id){A.el.className=B.el.className="done";A.el.textContent="✓ "+plain(A.it.s);done++;upd();
+      if(done===items.length){const w=$("win");w.textContent="Все пары найдены! Ошибок: "+errs;w.classList.remove("hide")}}
+    else{errs++;upd();[A.el,B.el].forEach(e=>{e.className="bad"});setTimeout(()=>{A.el.className="";B.el.className=""},350)}
+  }
+}
+D["∅"].push("ei");
+const FIN=[["a / o / e",["a","ai","ao","an","ang","o","ong","ou","e","ei","en","eng","er"]],["i",["i","ia","iao","ie","iou","ian","iang","in","ing","iong"]],["u",["u","ua","uo","ui","uai","uan","un","uang","ueng"]],["ü",["ü","üe","üan","ün"]]];
+const FL=FIN.flatMap(g=>g[1]);
+const ROWS=["-","m","f","b","p","d","t","n","l","z","c","s","zh","ch","sh","r","j","q","x","g","k","h"];
+const ZERO={i:"yi",ia:"ya",iao:"yao",ie:"ye",iou:"you",ian:"yan",iang:"yang",in:"yin",ing:"ying",iong:"yong",u:"wu",ua:"wa",uo:"wo",ui:"wei",uai:"wai",uan:"wan",un:"wen",uang:"wang",ueng:"weng","ü":"yu","üe":"yue","üan":"yuan","ün":"yun"};
+const ALL=new Set(Object.values(D).flat());
+function cellName(r,f){
+  let n;
+  if(r==="-")n=ZERO[f]||f;
+  else if(f==="iou")n=r+"iu";
+  else if(f[0]==="ü"){n=["j","q","x"].includes(r)?r+f.replace("ü","u"):["n","l"].includes(r)?r+f.replace("ü","v"):null}
+  else n=r+f;
+  return n&&ALL.has(n)?n:null;
+}
+const rowNames=r=>FL.map(f=>cellName(r,f)).filter(Boolean);
+const colNames=f=>ROWS.map(r=>cellName(r,f)).filter(Boolean);
+function renderTable(){
+  let h='<thead><tr><th></th>'+FIN.map(g=>'<th colspan="'+g[1].length+'" class="grp">'+g[0]+'</th>').join("")+'</tr><tr><th></th>'+FL.map(f=>'<th class="fh" data-f="'+f+'">'+f+'</th>').join("")+'</tr></thead><tbody>';
+  for(const r of ROWS){
+    h+='<tr><th class="rh" data-r="'+r+'">'+r+'</th>';
+    for(const f of FL){const n=cellName(r,f);h+=n?'<td><button data-s="'+n+'" class="'+(sel.has(n)?"sel":"")+'">'+plain(n)+'</button></td>':'<td></td>'}
+    h+='</tr>';
+  }
+  $("tbl").innerHTML=h+'</tbody>';
+}
+function toggleMany(list){
+  const all=list.every(s=>sel.has(s));
+  list.forEach(s=>all?sel.delete(s):sel.add(s));
+}
+$("tbl").onclick=e=>{
+  const b=e.target.closest("button[data-s]"),th=e.target.closest("th");
+  if(b){const s=b.dataset.s;sel.has(s)?sel.delete(s):sel.add(s);last=s;showTones(s)}
+  else if(th&&th.dataset.r)toggleMany(rowNames(th.dataset.r));
+  else if(th&&th.dataset.f)toggleMany(colNames(th.dataset.f));
+  else return;
+  renderTable();renderTray();
+};
+renderIni();renderSyl();renderTable();renderTray();
+</script>
+</body>
+</html>
