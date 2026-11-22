@@ -50,6 +50,13 @@ button.on{background:var(--ac);border-color:var(--ac);color:#fff}
 #tbl td button:hover{background:var(--ac2)}
 #tbl td button.sel{background:var(--ac);color:#fff}
 .btn{display:inline-block;font:inherit;background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:9px 12px;cursor:pointer}.btn:hover{border-color:var(--ac)}
+.tabs button{padding:9px 6px;font-size:14px}
+input{font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:9px 12px;flex:1;min-width:0}
+.word{font-size:28px;min-height:48px;display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.word span{background:var(--ac2);border:1px solid var(--ac);border-radius:10px;padding:2px 10px;cursor:pointer}
+.sv{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bd);font-size:20px}
+.sv span{flex:1}
+input[type=checkbox]{flex:none;width:18px;height:18px;padding:0}
 </style>
 </head>
 <body>
@@ -59,6 +66,7 @@ button.on{background:var(--ac);border-color:var(--ac);color:#fff}
 <div class="tabs">
  <button id="t1" class="on">1. Выбор слогов</button>
  <button id="t2">2. Сопоставление</button>
+ <button id="t3">3. Слова</button>
 </div>
 
 <section id="p1">
@@ -77,6 +85,18 @@ button.on{background:var(--ac);border-color:var(--ac);color:#fff}
  <div class="win hide" id="win"></div>
  <div class="act"><button class="big" id="again">Новый раунд</button><button id="back">← Слоги</button></div>
 </section>
+<section id="p3" class="hide">
+ <div class="card"><p class="lbl">Выберите начальный звук (★ — слоги, выбранные на вкладке 1), затем слог и тон</p>
+  <div class="row ini" id="wIni"></div>
+  <div class="row syl" id="wSyl" style="margin-top:8px"></div>
+  <div class="row tones" id="wTones" style="margin-top:8px"></div></div>
+ <div class="card"><p class="lbl">Или введите слово с цифрами тонов, например: ni3 hao3</p>
+  <div class="row"><input id="wIn" placeholder="ni3 hao3" autocomplete="off"><button id="wAdd">Добавить</button></div></div>
+ <div class="card"><p class="lbl">Слово (нажмите на слог, чтобы убрать его)</p><div class="word" id="wWord">—</div>
+  <div class="act"><button class="big" id="wPlay">▶ Слушать</button><button id="wSlow">🐢 Медленно</button><button id="wDel">⌫</button><button id="wClr">Очистить</button><button id="wSave">💾 Сохранить</button></div></div>
+ <div class="card"><p class="lbl">Сохранённые слова</p><div id="wList">—</div></div>
+</section>
+<label class="lbl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="synth"> Озвучивать синтезатором, если файла с записью нет</label>
 <p class="note" id="note"></p>
 </main>
 <script>
@@ -90,6 +110,7 @@ const $=id=>document.getElementById(id);
 const sel=new Set();let cur=null,last=null;
 
 function speak(s,t){
+  if(!SYNTH){$("note").textContent="Не найден файл audio/"+s+t+".mp3 (синтезатор выключен).";return}
   if(!window.speechSynthesis){$("note").textContent="Звук недоступен: нет записи и нет синтезатора речи в браузере.";return}
   speechSynthesis.cancel();
   const u=new SpeechSynthesisUtterance(mark(s,t));
@@ -139,8 +160,7 @@ $("none").onclick=()=>{if(cur){D[cur].forEach(s=>sel.delete(s));renderSyl();rend
 $("clear").onclick=()=>{sel.clear();renderTable();renderTray()};
 
 function tab(n){
-  $("p1").classList.toggle("hide",n!==1);$("p2").classList.toggle("hide",n!==2);
-  $("t1").className=n===1?"on":"";$("t2").className=n===2?"on":"";
+  for(const i of [1,2,3]){$("p"+i).classList.toggle("hide",n!==i);$("t"+i).className=n===i?"on":""}
 }
 $("t1").onclick=()=>tab(1);
 $("back").onclick=()=>tab(1);
@@ -212,6 +232,81 @@ $("tbl").onclick=e=>{
   else return;
   renderTable();renderTray();
 };
+
+let SYNTH=false;try{SYNTH=localStorage.getItem("synth")==="1"}catch(_){}
+let W=[],wIni="★",wSyl=null,seq=0,curA=null,curR=null;
+let SAVED=[];try{SAVED=JSON.parse(localStorage.getItem("pwords")||"[]")}catch(_){}
+const persist=()=>{try{localStorage.setItem("pwords",JSON.stringify(SAVED))}catch(_){}};
+function stopAudio(){seq++;if(curA){curA.pause();curA=null}if(curR){curR(false);curR=null}if(window.speechSynthesis)speechSynthesis.cancel()}
+function playAsync(s,t,id){
+  return new Promise(async done=>{
+    const k=s+t,SRC=["audio/"+k+".mp3","https://storage.yandexcloud.net/buyilehu/audio/pinyin/"+k+".mp3",BASE+k+".mp3"];
+    for(const u of SRC){
+      if(id!==seq)return done();
+      const ok=await new Promise(r=>{curR=r;const a=new Audio(u);curA=a;a.onended=()=>r(true);a.onerror=()=>r(false);a.play().catch(()=>r(false))});
+      if(ok)return done();
+    }
+    if(id!==seq)return done();
+    if(!SYNTH||!window.speechSynthesis){$("note").textContent="Не найден файл audio/"+s+t+".mp3";return done()}
+    const u=new SpeechSynthesisUtterance(mark(s,t));u.lang="zh-CN";u.rate=.7;
+    const v=speechSynthesis.getVoices().find(x=>/^zh/i.test(x.lang));if(v)u.voice=v;
+    u.onend=u.onerror=()=>done();speechSynthesis.speak(u);
+  });
+}
+async function playList(list,gap,show){
+  if(!list.length)return;
+  stopAudio();$("note").textContent="";const id=seq;
+  for(let i=0;i<list.length;i++){
+    if(id!==seq)return;
+    if(show)renderWord(i);
+    await playAsync(list[i].s,list[i].t,id);
+    if(id!==seq)return;
+    await new Promise(r=>setTimeout(r,gap));
+  }
+  if(show)renderWord();
+}
+function mkBtn(txt,cls,fn){const b=document.createElement("button");b.textContent=txt;if(cls)b.className=cls;b.onclick=fn;return b}
+function renderW(){
+  const I=$("wIni");I.innerHTML="";
+  for(const k of ["★",...Object.keys(D)])I.appendChild(mkBtn(k,wIni===k?"on":"",()=>{wIni=k;wSyl=null;renderW()}));
+  const list=wIni==="★"?[...sel]:D[wIni],S=$("wSyl");S.innerHTML="";
+  if(!list.length)S.textContent="Нет выбранных слогов: отметьте их на вкладке 1 или выберите начальный звук.";
+  for(const s of list)S.appendChild(mkBtn(plain(s),wSyl===s?"sel":"",()=>{wSyl=s;renderW()}));
+  const T=$("wTones");T.innerHTML="";
+  if(wSyl)for(let t=1;t<=4;t++)T.appendChild(mkBtn("🔊 "+mark(wSyl,t),"",()=>{W.push({s:wSyl,t});renderWord();stopAudio();playAsync(wSyl,t,seq)}));
+  renderWord();renderSaved();
+}
+function renderWord(cur=-1){
+  const w=$("wWord");w.innerHTML="";
+  if(!W.length){w.textContent="—";return}
+  W.forEach((x,i)=>{const sp=document.createElement("span");sp.textContent=mark(x.s,x.t);if(i===cur){sp.style.background="var(--ac)";sp.style.color="#fff"}sp.onclick=()=>{W.splice(i,1);renderWord()};w.appendChild(sp)});
+}
+function renderSaved(){
+  const L=$("wList");L.innerHTML="";
+  if(!SAVED.length){L.textContent="—";return}
+  SAVED.forEach((w,i)=>{
+    const list=w.map(([s,t])=>({s,t})),d=document.createElement("div");d.className="sv";
+    const sp=document.createElement("span");sp.textContent=list.map(x=>mark(x.s,x.t)).join(" ");
+    d.append(mkBtn("▶","",()=>playList(list,120,false)),sp,mkBtn("✎","",()=>{W=list.slice();renderWord()}),mkBtn("✕","",()=>{SAVED.splice(i,1);persist();renderSaved()}));
+    L.appendChild(d);
+  });
+}
+function addTyped(){
+  const txt=$("wIn").value.toLowerCase().replace(/ü|u:/g,"v"),bad=[];let n=0;
+  for(const m of txt.matchAll(/([a-z]+?)([1-4])/g)){if(ALL.has(m[1])){W.push({s:m[1],t:+m[2]});n++}else bad.push(m[1]+m[2])}
+  $("note").textContent=bad.length?"Нет такого слога: "+bad.join(", "):(n?"":"Введите слоги с цифрой тона 1–4, например: ma1 ni3");
+  if(n)$("wIn").value="";
+  renderWord();
+}
+$("t3").onclick=()=>{tab(3);renderW()};
+$("synth").checked=SYNTH;$("synth").onchange=e=>{SYNTH=e.target.checked;try{localStorage.setItem("synth",SYNTH?"1":"0")}catch(_){}};
+$("wAdd").onclick=addTyped;
+$("wIn").onkeydown=e=>{if(e.key==="Enter")addTyped()};
+$("wPlay").onclick=()=>playList(W,120,true);
+$("wSlow").onclick=()=>playList(W,700,true);
+$("wDel").onclick=()=>{W.pop();renderWord()};
+$("wClr").onclick=()=>{stopAudio();W=[];renderWord()};
+$("wSave").onclick=()=>{if(W.length){SAVED.push(W.map(x=>[x.s,x.t]));persist();renderSaved()}};
 renderIni();renderSyl();renderTable();renderTray();
 </script>
 </body>
